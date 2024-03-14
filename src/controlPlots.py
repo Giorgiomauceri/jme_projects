@@ -537,10 +537,222 @@ def tauPlotsMauceri(taus, jets, jetsCHS, sel, sel_tag, ntaus = 3, deltaRcut1 = 0
 
 
 
+def deltaRMauceri(taus, jets, jetsCHS, sel, sel_tag, ntaus = 3, deltaRcut1 = 0.4, deltaRcut2=0.2, bPNet = True):
+    plots = []
+    DeltaRselection = []
+    DeltaRselectionCHS = []
+
+    #sort tau by pT
+    taus = op.sort(taus, lambda j: -j.pt)
+
+    # create binning
+    etaBinning = [etabin[0] for etatag, etabin in eta_binning.items() if "0p0to5p2" not in etatag]
+    etaBinning+= [etabin[1] for etatag, etabin in eta_binning.items() if "0p0to5p2" not in etatag and etabin[1] not in etaBinning] 
+    etaBinning = VarBin(etaBinning)
+    # etaBinning = VarBin([0.0,2.0])
+    ptBinning = VarBin([0.,10.,20.,25.,30.,35.,40.,45.,50.,55.,60.,65.,70.,75.,80.,85.,90.,100.])
 
 
+    print('b')
+    # match each reco tau to closest jet, for the two algorythms, and compare
+    for ix in range(ntaus):
+        tau = taus[ix]
+        recojetPUPPI =  op.rng_min_element_by(jets, lambda jet: op.deltaR(jet.p4,tau.p4))
+        recojetCHS =  op.rng_min_element_by(jetsCHS, lambda jetCHS: op.deltaR(jetCHS.p4,tau.p4))
+        DeltaRselection.append( Plot.make1D(f"{sel_tag}_DeltaR_COMP"+str(ix),
+                                   (op.switch(
+                                       op.AND(
+                                           op.rng_len(taus)>ix,
+                                           op.deltaR(recojetPUPPI.p4,tau.p4)>deltaRcut1,
+                                           op.deltaR(recojetCHS.p4,tau.p4)<deltaRcut2,  
+                                           op.rng_len(jets)>0
+                                       ),
+                                       op.deltaR(recojetPUPPI.p4,tau.p4),
+                                       -99.
+                                   )),
+                                   sel,
+                                   EqBin(20,0.,4.),
+                                   xTitle=f"#delta R(tau,jet)"
+                               )
+                   )
+        DeltaRselectionCHS.append( Plot.make1D(f"{sel_tag}_DeltaR_COMP_CHS"+str(ix),
+                                   (op.switch(
+                                       op.AND(
+                                           op.rng_len(taus)>ix,
+                                           op.deltaR(recojetPUPPI.p4,tau.p4)>deltaRcut1,
+                                           op.deltaR(recojetCHS.p4,tau.p4)<deltaRcut2,  
+                                           op.rng_len(jets)>0
+                                       ),
+                                       op.deltaR(recojetCHS.p4,tau.p4),
+                                       -99.
+                                   )),
+                                   sel,
+                                   EqBin(20,0.,4.),
+                                   xTitle=f"#delta R(tau,jet)"
+                               )
+                   )    
+    
+    
+    plots+=[compar for compar in DeltaRselection]
+    plots+=[compar for compar in DeltaRselectionCHS]
+    plots.append(Plot.make1D(f"{sel_tag}_DeltaR_PUPPI",op.deltaR(recojetPUPPI.p4, tau.p4),sel,EqBin(20,0.,4.), xTitle=f"#delta R(tau,jet)"))
+    plots.append(Plot.make1D(f"{sel_tag}_DeltaR_CHS",op.deltaR(recojetCHS.p4, tau.p4), sel,EqBin(20,0.,4.), xTitle=f"#delta R(Tau,jet)"))
+
+
+    return plots
+
+def effIsotauPlots(taus, jets, sel, sel_tag, ntaus = 3, deltaRcut = 0.2, bPNet = True):
+    plots = []
+    nums = []
+    denums = []
+
+    #sort tau by pT
+    taus = op.sort(taus, lambda j: -j.pt)
+
+    # create binning
+    etaBinning = [etabin[0] for etatag, etabin in eta_binning.items() if "0p0to5p2" not in etatag]
+    etaBinning+= [etabin[1] for etatag, etabin in eta_binning.items() if "0p0to5p2" not in etatag and etabin[1] not in etaBinning] 
+    etaBinning = VarBin(etaBinning)
+    # etaBinning = VarBin([0.0,2.0])
+    ptBinning = VarBin([0.,10.,20.,25.,30.,35.,40.,45.,50.,55.,60.,65.,70.,75.,80.,85.,90.,100.])
+    
+    taupt = op.map(taus, lambda t:t.pt)
+    plots.append(Plot.make1D(f"{sel_tag}_tau_ISO_pt",taupt,sel,EqBin(100,0.,200.),xTitle = "tau p_{T} [GeV]"))
+    taueta = op.map(taus, lambda t:t.eta)
+    plots.append(Plot.make1D(f"{sel_tag}_tau_ISO_eta",taueta,sel,EqBin(100,-5.,5.),xTitle = "tau #eta "))
+    plots.append(Plot.make1D(f"{sel_tag}_tau_ISO_nTau",op.rng_len(taus),sel,EqBin(10,0.,10.),xTitle = "number of taus"))
+
+    if bPNet:
+        #### PNet Tau nodes
+        tauPNet = op.map(jets, lambda j:j.btagPNetTauVJet)
+        plots.append(Plot.make1D(f"{sel_tag}_ISO_PNetTauvsJet",tauPNet,sel,EqBin(100,0.,1.),xTitle = "btagPNetTauVJet"))
+        
+        plots.append(Plot.make1D(f"{sel_tag}_ISO1_PNetTauvsJet",jets[0].btagPNetTauVJet,sel,EqBin(100,0.,1.),xTitle = "btagPNetTauVJet"))
+
+
+
+    # match each reco tau to closest jet
+    for ix in range(ntaus):
+        tau = taus[ix]
+        recojet =  op.rng_min_element_by(jets, lambda jet: op.deltaR(jet.p4,tau.p4))
+
+        denum_sel = op.rng_len(taus)>ix
+        num_sel = op.AND(
+            denum_sel,
+            op.deltaR(recojet.p4,tau.p4)<deltaRcut, 
+            op.rng_len(jets)>0
+        )
+
+        #PNet for matched jets
+        if bPNet:
+            plots.append(Plot.make1D(f"{sel_tag}_matched_ISO_PNetTauvsJet_"+str(ix),op.switch(
+                num_sel,
+                recojet.btagPNetTauVJet,
+                -99.
+            ),sel,EqBin(100,0.,1.),xTitle = "btagPNetTauVJet"))
+            
+        nums.append( Plot.make2D(f"{sel_tag}_TAU_ISO_pteta_num_"+str(ix),
+                                   (op.switch(
+                                       num_sel,
+                                       tau.pt,
+                                       -99.
+                                   ),
+                                   op.abs(tau.eta)),
+                                   sel,
+                                   (ptBinning, etaBinning),
+                                   xTitle="#tau p_{T}",
+                                   yTitle="|#eta|"
+                               )
+                   )
+
+        denums.append( Plot.make2D(f"{sel_tag}_TAU_ISO_pteta_denum_"+str(ix),
+                                   (op.switch(
+                                       denum_sel,
+                                       tau.pt,
+                                       -99.
+                                   ),
+                                   op.abs(tau.eta)),
+                                   sel,
+                                   (ptBinning, etaBinning),
+                                   xTitle="#tau p_{T}",
+                                   yTitle="|#eta|"
+                               )
+                   )
+
+
+
+        jets = op.select(jets, lambda j: j.idx!=recojet.idx)
+    
+    plots.append(SummedPlot(f"{sel_tag}_TAU_ISO_pteta_num", nums, xTitle="#tau p_{T}",yTitle="|#eta|"))
+    plots.append(SummedPlot(f"{sel_tag}_TAU_ISO_pteta_denum", denums, xTitle="#tau p_{T}",yTitle="|#eta|"))
+
+    plots+=[num for num in nums]
+    plots+=[denum for denum in denums]
+
+    return plots
+   
+    
+def IsoTrackTaoMatcher(taus, IsoTracks, jetsCHS, sel, sel_tag, ntaus = 3, deltaRcut1 = 0.2, deltaRcut2=0.2, bPNet = True):
+    plots = []
+    fromPVplots = []
+
+    #sort tau by pT
+    taus = op.sort(taus, lambda j: -j.pt)
+
+    # create binning
+    etaBinning = [etabin[0] for etatag, etabin in eta_binning.items() if "0p0to5p2" not in etatag]
+    etaBinning+= [etabin[1] for etatag, etabin in eta_binning.items() if "0p0to5p2" not in etatag and etabin[1] not in etaBinning] 
+    etaBinning = VarBin(etaBinning)
+    # etaBinning = VarBin([0.0,2.0])
+    ptBinning = VarBin([0.,10.,20.,25.,30.,35.,40.,45.,50.,55.,60.,65.,70.,75.,80.,85.,90.,100.])
+    
+    print('c')
+    # match each reco tau to closest jet, for the two algorythms, and compare
+    for ix in range(ntaus):
+        tau = taus[ix]
+        recotrack =  op.rng_min_element_by(jets, lambda jet: op.deltaR(IsoTrack.p4,tau.p4))
+        recojetCHS =  op.rng_min_element_by(jetsCHS, lambda jetCHS: op.deltaR(jetCHS.p4,tau.p4))
+
+        #PNet for matched jets
+        if bPNet:
+            plots.append(Plot.make1D(f"{sel_tag}_matchedjet_PNetTauvsJet_MAUCERI_"+str(ix),op.switch(
+                op.AND(
+                    op.rng_len(taus)>ix,
+                    op.deltaR(recotrack.p4,tau.p4)>deltaRcut1,
+                    op.deltaR(recojetCHS.p4,tau.p4)<deltaRcut2,  
+                    op.rng_len(jets)>0
+                ),
+                recotrack.fromPV,
+                -99.
+            ),sel,EqBin(100,0.,1.),xTitle = "fromPVTauVTrackMAUCERI"))
+            
+        fromPVplots.append( Plot.make2D(f"{sel_tag}_numinatorTAU_MAUCERI_"+str(ix),
+                                   (op.switch(
+                                       op.AND(
+                                           op.rng_len(taus)>ix,
+                                           op.deltaR(recojetPUPPI.p4,tau.p4)>deltaRcut1,
+                                           op.deltaR(recojetCHS.p4,tau.p4)<deltaRcut2,  
+                                           op.rng_len(jets)>0
+                                       ),
+                                       tau.pt,
+                                       -99.
+                                   ),
+                                   op.abs(tau.eta)),
+                                   sel,
+                                   (ptBinning, etaBinning),
+                                   xTitle="#tau p_{T}",
+                                   yTitle="|#eta|"
+                               )
+                   )
 
     
+    plots.append(SummedPlot(f"{sel_tag}_numinatorTAU_MAUCERI", nums, xTitle="#tau p_{T} MAUCERI",yTitle="|#eta|"))
+
+    plots+=[num for num in nums]
+
+    return plots
+    
+
     
     
     

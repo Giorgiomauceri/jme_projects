@@ -50,7 +50,7 @@ class NanoBaseJME(NanoAODModule, HistogramsModule):
 
         def getNanoAODDescription():
             groups = ["HLT_", "MET_","PV_","Pileup_","Rho_"]
-            collections = ["nElectron", "nJet", "nMuon", "nFatJet", "nSubJet","nGenJet","nGenVisTau","nJetCHS", "nTau"]
+            collections = ["nElectron", "nJet", "nMuon", "nIsoTrack", "nFatJet", "nSubJet","nGenJet","nGenVisTau","nJetCHS", "nTau"]
             varReaders = [CalcCollectionsGroups(Jet=("pt", "mass"))]
             return NanoAODDescription(groups=groups, collections=collections, systVariations=varReaders)
 
@@ -91,6 +91,8 @@ class NanoBaseJME(NanoAODModule, HistogramsModule):
         addHLTPath('JetHT', 'DiPFJetAve160_HFJEC')
         addHLTPath('JetHT', 'DiPFJetAve220_HFJEC')
         addHLTPath('JetHT', 'DiPFJetAve300_HFJEC')
+        
+        addHLTPath('IsoTrack', 'IsoTrack')
 
         # Gen Weight and Triggers
         if self.is_MC:

@@ -156,6 +156,11 @@ class DYModule(NanoBaseJME):
         for status in taustati:
             plots+=cp.tauPlotsMauceri(op.select(tree.GenVisTau, lambda tau: tau.status ==status), tree.Jet, tree.JetCHS,  noSel, "noJetSelTau_CHS_PUPPI_comp"+str(status)+"GenJet_taueff_leadingtau0p2",ntaus = 1, deltaRcut1 = 0.4, deltaRcut2= 0.2, bPNet = False)
 
+        plots+=cp.deltaRMauceri(tree.GenVisTau, tree.Jet, tree.JetCHS, noSel, "noJetSelTau_CHS_PUPPI_comp",ntaus = 1, deltaRcut1 = 0.4, deltaRcut2 = 0.2, bPNet = False)
+
+        plots+=cp.effIsotauPlots(tree.GenVisTau, tree.IsoTrack, noSel, "noJetSelGenJet_ISO_taueff_leadingtau0p2",ntaus = 1, deltaRcut = 0.2, bPNet = False)
+        for status in taustati:
+            plots+=cp.effIsotauPlots(op.select(tree.GenVisTau, lambda tau: tau.status ==status),  tree.IsoTrack,  noSel, "noJetSeltaustatus"+str(status)+"GenJet_ISO_taueff_leadingtau0p2",ntaus = 1, deltaRcut = 0.2, bPNet = False)
 
         plots+=cp.eventPlots(tree, Zmasscut, "Zmasscut")
         # Cutflow report
