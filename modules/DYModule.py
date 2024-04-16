@@ -59,9 +59,24 @@ class DYModule(NanoBaseJME):
         Zmasscut = hasTwoSFLeptons.refine("Zmasscut", cut = (
                 op.AND(Zboson.M() > 80, Zboson.M() < 100)
         ))
-
-
         #### deltaphi selection on jets
+        
+        
+        
+        ### recoil calculation
+        #upar = op.sum(op.product(Zboson.px(), tree.PuppiMET.p4.px()),
+        #              op.product(Zboson.py(), tree.PuppiMET.p4.py()))
+        #uresp = op.divide(op.neg(upar), Zboson.pt())
+        
+        Q = tree.PuppiMET.p4 - Zboson
+        rec_par = Q.Px() * Zboson.Px() + Q.Py() * Zboson.Py()
+        rec_perp = op.sqrt(Q.Pt() * Q.Pt() - rec_par * rec_par)
+     
+        #rec_hist = Plot.make2D(f"RESPONSE", (-rec_par/Zboson.pt(), Zboson.pt), noSel, (EqBin(20,0.,1.), EqBin(20, 0., 100.)), xTitle=f"RESPONSE", yTitle=f"pt")
+        rec_hist = Plot.make2D(f"RESPONSE", (rec_par/Zboson.Pt(), Zboson.Pt()), noSel, (EqBin(20,0.,2.), EqBin(20, 0., 100.)), xTitle=f"RESPONSE", yTitle=f"pt")
+
+
+
 
         if sampleCfg['type'] == 'mc':
             #### efficiency and purity
@@ -152,15 +167,16 @@ class DYModule(NanoBaseJME):
         for status in taustati:
             plots+=cp.efftauPlots(op.select(tree.GenVisTau, lambda tau: tau.status ==status), tree.GenJet,  noSel, "noJetSeltaustatus"+str(status)+"GenJet_taueff_leadingtau0p2",ntaus = 1, deltaRcut = 0.2, bPNet = False)
 
+###########################
+
         plots+=cp.tauPlotsMauceri(tree.GenVisTau, tree.Jet, tree.JetCHS, noSel, "noJetSelTau_CHS_PUPPI_comp",ntaus = 1, deltaRcut1 = 0.4, deltaRcut2 = 0.2, bPNet = False)
         for status in taustati:
             plots+=cp.tauPlotsMauceri(op.select(tree.GenVisTau, lambda tau: tau.status ==status), tree.Jet, tree.JetCHS,  noSel, "noJetSelTau_CHS_PUPPI_comp"+str(status)+"GenJet_taueff_leadingtau0p2",ntaus = 1, deltaRcut1 = 0.4, deltaRcut2= 0.2, bPNet = False)
+            
+        plots += [rec_hist]
 
-        plots+=cp.deltaRMauceri(tree.GenVisTau, tree.Jet, tree.JetCHS, noSel, "noJetSelTau_CHS_PUPPI_comp",ntaus = 1, deltaRcut1 = 0.4, deltaRcut2 = 0.2, bPNet = False)
+###########################
 
-        plots+=cp.effIsotauPlots(tree.GenVisTau, tree.IsoTrack, noSel, "noJetSelGenJet_ISO_taueff_leadingtau0p2",ntaus = 1, deltaRcut = 0.2, bPNet = False)
-        for status in taustati:
-            plots+=cp.effIsotauPlots(op.select(tree.GenVisTau, lambda tau: tau.status ==status),  tree.IsoTrack,  noSel, "noJetSeltaustatus"+str(status)+"GenJet_ISO_taueff_leadingtau0p2",ntaus = 1, deltaRcut = 0.2, bPNet = False)
 
         plots+=cp.eventPlots(tree, Zmasscut, "Zmasscut")
         # Cutflow report
