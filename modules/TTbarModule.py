@@ -35,9 +35,11 @@ class TTbarModule(NanoBaseJME):
         # 1 lepton channel selection
         hasOneSFLepton = noSel.refine('hasOneSFLepton', cut=
                 op.AND(op.rng_len(muons) == 1, op.rng_len(clElectrons) ==0, 
-                       #muons[0].pt > 25.
+                       muons[0].pt > 25.
             ))
 
+
+       
         ### Di-leptonic channel ###
 
         # 2 muon and 2 electron selection
@@ -55,51 +57,79 @@ class TTbarModule(NanoBaseJME):
 
 
         # Neutrino Reconstruction
-        bjets = op.select(tree.Jet, lambda jet: jet.btagDeepFlavCvB>=0.8)
-        #bjets = []
-        #for x in range(op.rng_len()+1):
-        #    if (tree.Jet[x].btagDeepFlavCvB>=0.8):
-        #        bjets.append(tree.Jet[x])
+        bjets = op.select(clak4Jets, lambda jet: jet.btagDeepFlavCvB>=0.8)
         bjet =  op.rng_min_element_by(bjets, lambda bjet: op.deltaR(bjet.p4,muons[0].p4))
 
         
         Mass_W = 80.399
-        
-        #mu = op.sum(op.pow(Mass_W, 2)/2., op.product(muons[0].pt, tree.PuppiMET.pt)) 
-        #A = op.product(muons[0].p4.Pt(), muons[0].p4.Pt())
-        #B = op.product(mu, muons[0].p4.Pz())
-        #C = op.sum(op.product(mu, mu), op.product(-op.pow(muons[0].p4.E(), 2), op.pow(tree.PuppiMET.pt, 2)))
-        #Discr = op.sum(op.pow(B, 2),-op.product(A, C))
-        
-        #neutrinosol1=op.multiSwitch((Discr<=0,-B/A), (Discr>0, -op.sum(B, op.sqrt(Discr))/A))
-        #neutrinosol2=op.multiSwitch((Discr<=0,-B/A), (Discr>0, op.sum(-B, op.sqrt(Discr))/A))
                 
         A = Mass_W*Mass_W/2. + tree.PuppiMET.p4.Px()*muons[0].p4.Px() + tree.PuppiMET.p4.Py()*muons[0].p4.Py()      
         Discr = muons[0].p4.E() * muons[0].p4.E() * (A * A - tree.PuppiMET.pt * tree.PuppiMET.pt * muons[0].pt*muons[0].pt)
-        neutrinosol1=op.multiSwitch((Discr<=0,op.product(A, muons[0].p4.Pz())/op.pow(muons[0].pt, 2)), 
-                                    (Discr>0, op.sum(-op.product(A, muons[0].p4.Pz()), op.sqrt(Discr))/op.pow(muons[0].pt, 2)))
-        neutrinosol2=op.multiSwitch((Discr<=0,op.product(A, muons[0].p4.Pz())/op.pow(muons[0].pt, 2)), 
-                                    (Discr>0, op.sum(-op.product(A, muons[0].p4.Pz()), -op.sqrt(Discr))/op.pow(muons[0].pt, 2)))
-        
-        neutrino1 = op._to.Construct("ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float> >", 
+        neutrinosol1=op.switch(Discr<=0,op.product(A, muons[0].p4.Pz())/op.pow(muons[0].pt, 2), 
+                                 op.sum(-op.product(A, muons[0].p4.Pz()), op.sqrt(Discr))/op.pow(muons[0].pt, 2))
+        neutrinosol2=op.switch(Discr<=0,op.product(A, muons[0].p4.Pz())/op.pow(muons[0].pt, 2), 
+                                 op.sum(-op.product(A, muons[0].p4.Pz()),-op.sqrt(Discr))/op.pow(muons[0].pt, 2))                 
+          
+        neutrino1 = op.construct("ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float> >", 
                                 (tree.PuppiMET.p4.Px(), tree.PuppiMET.p4.Py(), neutrinosol1, op.sqrt(op.pow(tree.PuppiMET.p4.E(), 2)+op.pow(neutrinosol1, 2))))           
-        neutrino2 = op._to.Construct("ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float> >", 
-                                (tree.PuppiMET.p4.Px(), tree.PuppiMET.p4.Py(), neutrinosol2, op.sqrt(op.pow(tree.PuppiMET.p4.E(), 2)+op.pow(neutrinosol2, 2))))            
+        neutrino2 = op.construct("ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float> >", 
+                                (tree.PuppiMET.p4.Px(), tree.PuppiMET.p4.Py(), neutrinosol2, op.sqrt(op.pow(tree.PuppiMET.p4.E(), 2)+op.pow(neutrinosol2, 2))))                          
+          
                       
         Wboson1 = op.sum(neutrino1, muons[0].p4)
         Wboson2 = op.sum(neutrino2, muons[0].p4)
         Topcand1 = op.sum(Wboson1, bjet.p4)
         Topcand2 = op.sum(Wboson2, bjet.p4)
-        Topq_M = op.switch(op.abs(op.sum(Topcand1.M(), -172.76))<op.abs(op.sum(Topcand2.M(), -172.76)), Topcand1.E(), Topcand2.E())
+        Topq_M = op.switch(op.abs(op.sum(Topcand1.M(), -172.76))<op.abs(op.sum(Topcand2.M(), -172.76)), Topcand1.M(), Topcand2.M())
+        Topq_chisquare = op.switch(op.abs(op.sum(Topcand1.M(), -172.76))<op.abs(op.sum(Topcand2.M(), -172.76)), op.pow(op.sum(Topcand1.M(), -172.76), 2)/289., op.pow(op.sum(Topcand2.M(), -172.76), 2)/289.)
 
-        Top_mass_hist = Plot.make1D(f"noSel_Top_MASS", Topq_M, noSel, EqBin(40, 0., 500.), xTitle=f"Top Mass")
-        Top_mass_hist_twolep = Plot.make1D(f"hasTwoSFLeptons_Top_MASS", Topq_M, hasTwoSFLeptons, EqBin(40, 0., 500.), xTitle=f"Top Mass")
-        Top_mass_hist_onelep = Plot.make1D(f"hasOneSFLepton_Top_MASS", Topq_M, hasOneSFLepton, EqBin(40, 0., 500.), xTitle=f"Top Mass")
+        # 1 lepton channel selection+chi2 10
+        hasOneSFLeptonChi10 = noSel.refine('hasOneSFLeptonChi10', cut=
+                op.AND(op.rng_len(muons) == 1, op.rng_len(clElectrons) ==0, 
+                       muons[0].pt > 25.,
+                       op.pow(op.sum(Topcand1.M(), -172.76), 2)/289. < 10
+            ))
 
+        # 1 lepton channel selection+chi2 20
+        hasOneSFLeptonChi20 = noSel.refine('hasOneSFLeptonChi20', cut=
+                op.AND(op.rng_len(muons) == 1, op.rng_len(clElectrons) ==0, 
+                       muons[0].pt > 25.,
+                       op.pow(op.sum(Topcand1.M(), -172.76), 2)/289. < 20
+            ))
+
+        # 1 lepton channel selection+chi2 50
+        hasOneSFLeptonChi50 = noSel.refine('hasOneSFLeptonChi50', cut=
+                op.AND(op.rng_len(muons) == 1, op.rng_len(clElectrons) ==0, 
+                       muons[0].pt > 25.,
+                       op.pow(op.sum(Topcand1.M(), -172.76), 2)/289. < 50
+            ))
+            
+        # 1 lepton channel selection + have at least 1 b
+        hasOneSFLeptonB = noSel.refine('hasOneSFLeptonB', cut=
+                op.AND(op.rng_len(muons) == 1, op.rng_len(clElectrons) ==0, 
+                       muons[0].pt > 25.,
+                       op.rng_len(bjets) >= 1
+            ))
+
+
+############################################## Plots
+
+
+        Top_mass_hist = Plot.make1D(f"noSel_Top_MASS", Topq_M, noSel, EqBin(100, 0., 500.), xTitle=f"Top Mass")
+        Top_mass_hist_twolep = Plot.make1D(f"hasTwoSFLeptons_Top_MASS", Topq_M, hasTwoSFLeptons, EqBin(100, 0., 500.), xTitle=f"Top Mass")
+        Top_mass_hist_onelep = Plot.make1D(f"hasOneSFLepton_Top_MASS", Topq_M, hasOneSFLepton, EqBin(100, 0., 500.), xTitle=f"Top Mass")
+
+        Top_chi2_hist_onelep = Plot.make1D(f"hasOneSFLepton_Top_Chisquare", Topq_chisquare, hasOneSFLepton, EqBin(100, 0., 500.), xTitle=f"Chi^2")
+        
+        
+        Top_mass_hist_onelepB = Plot.make1D(f"hasOneSFLeptonB_Top_MASS", Topq_M, hasOneSFLeptonB, EqBin(100, 0., 1000.), xTitle=f"Top Mass")
+      
+        
+        
+        
 ###############################################
 
         plots = []
-        plots+=[Top_mass_hist, Top_mass_hist_twolep, Top_mass_hist_onelep]
+        plots+=[Top_mass_hist, Top_mass_hist_twolep, Top_mass_hist_onelep, Top_chi2_hist_onelep, Top_mass_hist_onelepB]
         return plots
-
-
+  
