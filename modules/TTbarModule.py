@@ -75,7 +75,7 @@ class TTbarModule(NanoBaseJME):
         neutrino2 = op.construct("ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float> >", 
                                 (tree.PuppiMET.p4.Px(), tree.PuppiMET.p4.Py(), neutrinosol2, op.sqrt(op.pow(tree.PuppiMET.p4.E(), 2)+op.pow(neutrinosol2, 2))))                          
           
-                      
+        # Top Quark reconstruction              
         Wboson1 = op.sum(neutrino1, muons[0].p4)
         Wboson2 = op.sum(neutrino2, muons[0].p4)
         Topcand1 = op.sum(Wboson1, bjet.p4)
