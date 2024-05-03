@@ -523,10 +523,8 @@ def tauPlotsMauceri(taus, jets, jetsCHS, sel, sel_tag, ntaus = 3, deltaRcut1 = 0
 
     return plots
 
-
-
     
-def taufromPV(taus, jets, jetsCHS, PFCand, sel, sel_tag, ntaus = 3, deltaRcut1 = 0.4, deltaRcut2=0.2, bPNet = True):
+def taufromPV(taus, jets, jetsCHS, PFCand, sel, sel_tag, ntaus = 1, deltaRcut1 = 0.4, deltaRcut2=0.2, bPNet = True):
     plots = []
     fromPVlist = []
     mismat_jets = []
@@ -546,107 +544,53 @@ def taufromPV(taus, jets, jetsCHS, PFCand, sel, sel_tag, ntaus = 3, deltaRcut1 =
         tau = taus[ix]
         recojetPUPPI =  op.rng_min_element_by(jets, lambda jet: op.deltaR(jet.p4,tau.p4))
         recojetCHS =  op.rng_min_element_by(jetsCHS, lambda jetCHS: op.deltaR(jetCHS.p4,tau.p4))
-        if (op.AND(op.rng_len(taus)>ix, op.deltaR(tau.p4,recojetPUPPI.p4)>deltaRcut2, 
-                  op.deltaR(recojetCHS.p4,tau.p4)<deltaRcut2, op.rng_len(jetsCHS)>0)):
-            mismat_jets.append(recojetCHS)
-            print(ix)
+        matchjetsCHS = op.select(jetsCHS, lambda jet:   op.AND(op.rng_len(jets)>0, op.rng_len(taus)>ix, op.deltaR(jet.p4,tau.p4)<deltaRcut2))
+        recojetCHS1 = op.rng_min_element_by(matchjetsCHS, lambda jetCHS: op.deltaR(jetCHS.p4,tau.p4))
         
+        sel1jets=sel.refine("SELECTIONPV"+str(ix), cut = (op.rng_len(matchjetsCHS)>0))
         
-        candchs = op.rng_max_element_by(op.select(PFCand, lambda cand1: op.deltaR(recojetCHS.p4, cand1.p4)<0.4), lambda cand2: cand2.pt)
-        candpuppi = op.rng_max_element_by(op.select(PFCand, lambda cand1: op.deltaR(recojetPUPPI.p4, cand1.p4)<0.4), lambda cand2: cand2.pt)
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVAAAAA"+str(ix), op.deltaR(recojetCHS1.p4, tau.p4), sel, EqBin(100, 0., 1.), xTitle="deltaR"))
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVBBBBB"+str(ix), op.deltaR(recojetCHS.p4, tau.p4), sel1jets, EqBin(100, 0., 1.), xTitle="deltaR"))
+        #plots.append( Plot.make1D(f"{sel_tag}_PROVCCCC_"+str(ix),
+        #                           op.switch(
+        #                               op.AND(
+        #                                   op.rng_len(taus)>ix,
+        #                                   op.deltaR(recojetCHS.p4,tau.p4)<deltaRcut2,  
+        #                                   op.rng_len(jets)>0
+        #                               ),
+        #                               op.deltaR(recojetCHS.p4,tau.p4),
+        #                               -99.
+        #                           ),
+        #                           sel,
+        #                           EqBin(100, 0., 1.),
+        #                           xTitle="DeltaR"
+        #                       )
+        #           )
         
-        fromPVlist.append( Plot.make1D(f"{sel_tag}_FROMPV_CHS_MAUCERI_"+str(ix),
-                                   op.switch(
-                                       op.AND(
-                                           op.rng_len(taus)>ix,
-                                           op.deltaR(recojetCHS.p4,tau.p4)<deltaRcut2,  
-                                           op.rng_len(jets)>0
-                                       ),
-                                       candchs.fromPV0,
-                                       -99.
-                                   ),
-                                   sel,
-                                   EqBin(10, 0., 5.),
-                                   xTitle="fromPV0"
-                               )
-                   )    
-        fromPVlist.append( Plot.make1D(f"{sel_tag}_FROMPV_PUPPI_MAUCERI_"+str(ix),
-                                   op.switch(
-                                       op.AND(
-                                           op.rng_len(taus)>ix,
-                                           op.deltaR(recojetPUPPI.p4,tau.p4)<deltaRcut2,  
-                                           op.rng_len(jets)>0
-                                       ),
-                                      candpuppi.fromPV0,
-                                      -99.
-                                   ),
-                                   sel,
-                                   EqBin(10, 0., 5.),
-                                   xTitle="fromPV0"
-                               )
-                   )      
-        
-            
-    for ix in range(len(mismat_jets)):
-        mismatchedjet = mismat_jets[ix]
-        all_candCHS = op.select(PFCand, lambda cand: op.deltaR(mismatchedjet.p4, cand.p4)<0.4)
+        all_candCHS = op.select(PFCand, lambda allcand: op.deltaR(recojetCHS1.p4, allcand.p4)<0.2)
         CAND_CHS = op.rng_max_element_by(all_candCHS, lambda cand: cand.pt)
         
-        fromPVlist.append( Plot.make1D(f"{sel_tag}_FROMPV_frompv_Tau_MAUCERI_"+str(ix),
-                                   CAND_CHS.fromPV0,
-                                   sel,
-                                   EqBin(10, 0., 5.),
-                                   xTitle="#fromPV0"
-                               )
-                   )
-        fromPVlist.append( Plot.make1D(f"{sel_tag}_FROMPV_PT_Tau_MAUCERI_"+str(ix),
-                                   CAND_CHS.pt,
-                                   sel,
-                                   EqBin(40, 0., 40.),
-                                   xTitle="pt"
-                               )
-                   )        
-        fromPVlist.append( Plot.make1D(f"{sel_tag}_FROMPV_JETpt_Tau_MAUCERI_"+str(ix),
-                                   mismatchedjet.pt,
-                                   sel,
-                                   EqBin(40, 0., 80.),
-                                   xTitle="pt"
-                               )
-                   )                  
-        fromPVlist.append( Plot.make1D(f"{sel_tag}_FROMPV_npart_Tau_MAUCERI_"+str(ix),
-                                   op.rng_len(all_candCHS),
-                                   sel,
-                                   EqBin(10, 0., 100.),
-                                   xTitle="npart"
-                               )
-                   )
-        fromPVlist.append( Plot.make1D(f"{sel_tag}_FROMPV_weight_Tau_MAUCERI_"+str(ix),
-                                   CAND_CHS.puppiWeight,
-                                   sel,
-                                   EqBin(40, 0., 1.001),
-                                   xTitle="weight"
-                               )
-                   )
-        fromPVlist.append( Plot.make1D(f"{sel_tag}_FROMPV_DR_Tau_MAUCERI_"+str(ix),
-                                   op.rng_min(all_candCHS, lambda cand: op.deltaR(mismatchedjet.p4, cand.p4)),
-                                   sel,
-                                   EqBin(40, 0., 0.2),
-                                   xTitle="#Delta R"
-                               )
-                   )           
-        fromPVlist.append( Plot.make1D(f"{sel_tag}_FROMPV_minDR_Tau_MAUCERI_"+str(ix),
-                                   op.rng_min(jets, lambda jet: op.deltaR(jet.p4, CAND_CHS.p4)),
-                                   sel,
-                                   EqBin(40, 0., 0.6),
-                                   xTitle="#Delta R"
-                               )
-                   )          
-    
+        sel1cand = sel1jets.refine("SELECTIONPVPFCAND"+str(ix), cut = (op.rng_len(all_candCHS)>0))
+        sel2cand = sel1cand.refine("SELECTIONPV_PFCAND2"+str(ix), cut = (op.deltaR(recojetPUPPI.p4,tau.p4)>0.4))
+        plots.append(Plot.make1D(f"{sel_tag}_PROVDDDDD"+str(ix), CAND_CHS.fromPV0, sel1cand, EqBin(100, 0., 4.), xTitle="fromPV0"))
+        plots.append(Plot.make1D(f"{sel_tag}_PROVEEEEE"+str(ix), CAND_CHS.fromPV0, sel, EqBin(100, 0., 4.), xTitle="fromPV0"))
+        plots.append(Plot.make1D(f"{sel_tag}_PROVFFFFF"+str(ix), op.deltaR(recojetPUPPI.p4, tau.p4), sel2cand, EqBin(100, 0., 1.), xTitle="DeltaR"))
+        plots.append(Plot.make1D(f"{sel_tag}_PROVGGGGG"+str(ix), CAND_CHS.fromPV0, sel2cand, EqBin(100, 0., 4.), xTitle="fromPV0"))
 
-    plots+=[num for num in fromPVlist]
-    return plots
-
-
-
-    
+        
+        
+        
+        
+        
+    return plots    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
     
