@@ -447,7 +447,7 @@ def efftauPlots(taus, jets, sel, sel_tag, ntaus = 3, deltaRcut = 0.4, bPNet = Tr
 ############################################################################## Mauceri
 ##############################################################################    
     
-def tauPlotsMauceri(taus, jets, jetsCHS, sel, sel_tag, ntaus = 3, deltaRcut1 = 0.4, deltaRcut2=0.2, bPNet = True):
+def tauPlotsMauceri(taus, jets, jetsCHS, sel, sel_tag, ntaus = 1, deltaRcut1 = 0.4, deltaRcut2=0.2, bPNet = True):
     plots = []
     nums = []
     denums = []
@@ -461,62 +461,105 @@ def tauPlotsMauceri(taus, jets, jetsCHS, sel, sel_tag, ntaus = 3, deltaRcut1 = 0
     etaBinning = VarBin(etaBinning)
     # etaBinning = VarBin([0.0,2.0])
     ptBinning = VarBin([0.,10.,20.,25.,30.,35.,40.,45.,50.,55.,60.,65.,70.,75.,80.,85.,90.,100.])
+
     
-    taupt = op.map(taus, lambda t:t.pt)
-    plots.append(Plot.make1D(f"{sel_tag}_tau_ptMAUCERI",taupt,sel,EqBin(100,0.,200.),xTitle = "tau p_{T} [GeV] MAUCERI"))
-    taueta = op.map(taus, lambda t:t.eta)
-    plots.append(Plot.make1D(f"{sel_tag}_tau_etaMAUCERI",taueta,sel,EqBin(100,-5.,5.),xTitle = "tau #eta MAUCERI"))
-    plots.append(Plot.make1D(f"{sel_tag}_tau_nTauMAUCERI",op.rng_len(taus),sel,EqBin(10,0.,10.),xTitle = "number of taus MAUCERI"))
-
-    if bPNet:
-        #### PNet Tau nodes
-        tauPNet = op.map(jets, lambda j:j.btagPNetTauVJet)
-        plots.append(Plot.make1D(f"{sel_tag}_jet_PNetTauvsJetMAUCERI",tauPNet,sel,EqBin(100,0.,1.),xTitle = "btagPNetTauVJet MAUCERI"))
-        
-        plots.append(Plot.make1D(f"{sel_tag}_jet1_PNetTauvsJetMAUCERI",jets[0].btagPNetTauVJet,sel,EqBin(100,0.,1.),xTitle = "btagPNetTauVJet MAUCERI"))
-
-
+    
     print('a')
     # match each reco tau to closest jet, for the two algorythms, and compare
     for ix in range(ntaus):
         tau = taus[ix]
         recojetPUPPI =  op.rng_min_element_by(jets, lambda jet: op.deltaR(jet.p4,tau.p4))
         recojetCHS =  op.rng_min_element_by(jetsCHS, lambda jetCHS: op.deltaR(jetCHS.p4,tau.p4))
-
-        nums.append( Plot.make1D(f"{sel_tag}_ptTau_MAUCERI_"+str(ix),
-                                   op.switch(
-                                       op.AND(
-                                           op.rng_len(taus)>ix,
-                                           op.deltaR(recojetPUPPI.p4,tau.p4)>deltaRcut1,
-                                           op.deltaR(recojetCHS.p4,tau.p4)<deltaRcut2,  
-                                           op.rng_len(jets)>0
-                                       ),
-                                       tau.pt,
-                                       -99.
-                                   ),
+        
+        denum_sel = op.rng_len(taus)>ix
+        num_sel00 = op.AND(denum_sel,op.deltaR(recojetCHS.p4,tau.p4)>deltaRcut1,
+                          op.deltaR(recojetPUPPI.p4,tau.p4)>deltaRcut1, op.rng_len(jets)>0)
+        nums.append( Plot.make2D(f"{sel_tag}_TAU_eff_pteta_00_num",
+                                   (op.switch(num_sel00, tau.pt, -99.),
+                                   op.abs(tau.eta)),
                                    sel,
-                                   ptBinning,
-                                   xTitle="#tau p_{T}"
-                               )
-                   )
-        denums.append( Plot.make1D(f"{sel_tag}_etaTau_MAUCERI_"+str(ix),
-                                   op.switch(
-                                       op.AND(
-                                           op.rng_len(taus)>ix,
-                                           op.deltaR(recojetPUPPI.p4,tau.p4)>deltaRcut1,
-                                           op.deltaR(recojetCHS.p4,tau.p4)<deltaRcut2,  
-                                           op.rng_len(jets)>0
-                                       ),
-                                       tau.eta,
-                                       -99.
-                                   ),
-                                   sel,
-                                   etaBinning,
-                                   xTitle="#tau #eta"
+                                   (ptBinning, etaBinning),
+                                   xTitle="#tau p_{T}",
+                                   yTitle="|#eta|"
                                )
                    )
 
+        denums.append( Plot.make2D(f"{sel_tag}_TAU_eff_pteta_00_denum",
+                                   (op.switch(denum_sel, tau.pt, -99.),
+                                   op.abs(tau.eta)),
+                                   sel,
+                                   (ptBinning, etaBinning),
+                                   xTitle="#tau p_{T}",
+                                   yTitle="|#eta|"
+                               )
+                   )
+        num_sel01 = op.AND(denum_sel,op.deltaR(recojetCHS.p4,tau.p4)>deltaRcut1,
+                          op.deltaR(recojetPUPPI.p4,tau.p4)<deltaRcut2, op.rng_len(jets)>0)
+        nums.append( Plot.make2D(f"{sel_tag}_TAU_eff_pteta_01_num",
+                                   (op.switch(num_sel01, tau.pt, -99.),
+                                   op.abs(tau.eta)),
+                                   sel,
+                                   (ptBinning, etaBinning),
+                                   xTitle="#tau p_{T}",
+                                   yTitle="|#eta|"
+                               )
+                   )
 
+        denums.append( Plot.make2D(f"{sel_tag}_TAU_eff_pteta_01_denum",
+                                   (op.switch(denum_sel, tau.pt, -99.),
+                                   op.abs(tau.eta)),
+                                   sel,
+                                   (ptBinning, etaBinning),
+                                   xTitle="#tau p_{T}",
+                                   yTitle="|#eta|"
+                               )
+                   )          
+        num_sel10 = op.AND(denum_sel,op.deltaR(recojetCHS.p4,tau.p4)<deltaRcut2,
+                          op.deltaR(recojetPUPPI.p4,tau.p4)>deltaRcut1, op.rng_len(jets)>0)
+        nums.append( Plot.make2D(f"{sel_tag}_TAU_eff_pteta_10_num",
+                                   (op.switch(num_sel10, tau.pt, -99.),
+                                   op.abs(tau.eta)),
+                                   sel,
+                                   (ptBinning, etaBinning),
+                                   xTitle="#tau p_{T}",
+                                   yTitle="|#eta|"
+                               )
+                   )
+
+        denums.append( Plot.make2D(f"{sel_tag}_TAU_eff_pteta_10_denum",
+                                   (op.switch(denum_sel, tau.pt, -99.),
+                                   op.abs(tau.eta)),
+                                   sel,
+                                   (ptBinning, etaBinning),
+                                   xTitle="#tau p_{T}",
+                                   yTitle="|#eta|"
+                               )
+                   )
+                   
+        num_sel11 = op.AND(denum_sel,op.deltaR(recojetCHS.p4,tau.p4)<deltaRcut2,
+                          op.deltaR(recojetPUPPI.p4,tau.p4)<deltaRcut2, op.rng_len(jets)>0)
+        nums.append( Plot.make2D(f"{sel_tag}_TAU_eff_pteta_11_num_"+str(ix),
+                                   (op.switch(num_sel11, tau.pt, -99.),
+                                   op.abs(tau.eta)),
+                                   sel,
+                                   (ptBinning, etaBinning),
+                                   xTitle="#tau p_{T}",
+                                   yTitle="|#eta|"
+                               )
+                   )
+
+        denums.append( Plot.make2D(f"{sel_tag}_TAU_eff_pteta_11_denum",
+                                   (op.switch(denum_sel, tau.pt, -99.),
+                                   op.abs(tau.eta)),
+                                   sel,
+                                   (ptBinning, etaBinning),
+                                   xTitle="#tau p_{T}",
+                                   yTitle="|#eta|"
+                               )
+                   )           
+                   
+                   
+                   
 
     plots+=[num for num in nums]
     plots+=[denum for denum in denums]
@@ -532,51 +575,76 @@ def taufromPV(taus, jets, jetsCHS, PFCand, sel, sel_tag, ntaus = 1, deltaRcut1 =
     #sort tau by pT
     taus = op.sort(taus, lambda j: -j.pt)
 
-    if bPNet:
-        #### PNet Tau nodes
-        tauPNet = op.map(jets, lambda j:j.btagPNetTauVJet)
-        plots.append(Plot.make1D(f"{sel_tag}_jet_PNetTauvsJetMAUCERI",tauPNet,sel,EqBin(100,0.,1.),xTitle = "btagPNetTauVJet MAUCERI"))
-        
-        plots.append(Plot.make1D(f"{sel_tag}_jet1_PNetTauvsJetMAUCERI",jets[0].btagPNetTauVJet,sel,EqBin(100,0.,1.),xTitle = "btagPNetTauVJet MAUCERI"))
-
     # match each reco tau to closest jet, for the two algorythms, and compare
     for ix in range(ntaus):
         tau = taus[ix]
         recojetPUPPI =  op.rng_min_element_by(jets, lambda jet: op.deltaR(jet.p4,tau.p4))
         recojetCHS =  op.rng_min_element_by(jetsCHS, lambda jetCHS: op.deltaR(jetCHS.p4,tau.p4))
-        matchjetsCHS = op.select(jetsCHS, lambda jet:   op.AND(op.rng_len(jets)>0, op.rng_len(taus)>ix, op.deltaR(jet.p4,tau.p4)<deltaRcut2))
+        matchjetsCHS = op.select(jetsCHS, lambda jet:   op.AND(op.rng_len(jets)>0, op.rng_len(taus)>ix,
+                                                               op.deltaR(jet.p4,tau.p4)<deltaRcut2))
         recojetCHS1 = op.rng_min_element_by(matchjetsCHS, lambda jetCHS: op.deltaR(jetCHS.p4,tau.p4))
         
         sel1jets=sel.refine("SELECTIONPV"+str(ix), cut = (op.rng_len(matchjetsCHS)>0))
-        
-        #plots.append(Plot.make1D(f"{sel_tag}_PROVAAAAA"+str(ix), op.deltaR(recojetCHS1.p4, tau.p4), sel, EqBin(100, 0., 1.), xTitle="deltaR"))
-        #plots.append(Plot.make1D(f"{sel_tag}_PROVBBBBB"+str(ix), op.deltaR(recojetCHS.p4, tau.p4), sel1jets, EqBin(100, 0., 1.), xTitle="deltaR"))
-        #plots.append( Plot.make1D(f"{sel_tag}_PROVCCCC_"+str(ix),
-        #                           op.switch(
-        #                               op.AND(
-        #                                   op.rng_len(taus)>ix,
-        #                                   op.deltaR(recojetCHS.p4,tau.p4)<deltaRcut2,  
-        #                                   op.rng_len(jets)>0
-        #                               ),
-        #                               op.deltaR(recojetCHS.p4,tau.p4),
-        #                               -99.
-        #                           ),
-        #                           sel,
-        #                           EqBin(100, 0., 1.),
-        #                           xTitle="DeltaR"
-        #                       )
-        #           )
-        
+                
         all_candCHS = op.select(PFCand, lambda allcand: op.deltaR(recojetCHS1.p4, allcand.p4)<0.2)
         CAND_CHS = op.rng_max_element_by(all_candCHS, lambda cand: cand.pt)
         
+        #sel1jets=sel.refine("SELECTIONPV"+str(ix), cut = (op.rng_len(matchjetsCHS)>0))       
         sel1cand = sel1jets.refine("SELECTIONPVPFCAND"+str(ix), cut = (op.rng_len(all_candCHS)>0))
         sel2cand = sel1cand.refine("SELECTIONPV_PFCAND2"+str(ix), cut = (op.deltaR(recojetPUPPI.p4,tau.p4)>0.4))
-        plots.append(Plot.make1D(f"{sel_tag}_PROVDDDDD"+str(ix), CAND_CHS.fromPV0, sel1cand, EqBin(100, 0., 4.), xTitle="fromPV0"))
-        plots.append(Plot.make1D(f"{sel_tag}_PROVEEEEE"+str(ix), CAND_CHS.fromPV0, sel, EqBin(100, 0., 4.), xTitle="fromPV0"))
-        plots.append(Plot.make1D(f"{sel_tag}_PROVFFFFF"+str(ix), op.deltaR(recojetPUPPI.p4, tau.p4), sel2cand, EqBin(100, 0., 1.), xTitle="DeltaR"))
-        plots.append(Plot.make1D(f"{sel_tag}_PROVGGGGG"+str(ix), CAND_CHS.fromPV0, sel2cand, EqBin(100, 0., 4.), xTitle="fromPV0"))
 
+#        plots.append(Plot.make1D(f"{sel_tag}_PROV00000"+str(ix), op.deltaR(jetsCHS.p4, tau.p4), sel, EqBin(100, 0., 1.), xTitle="deltaR"))
+
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVAAAAA"+str(ix), op.deltaR(recojetCHS1.p4, tau.p4), sel, EqBin(100, 0., 1.), xTitle="deltaR"))
+
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVBBBBB"+str(ix), op.deltaR(recojetCHS1.p4, tau.p4), sel1jets, EqBin(100, 0., 1.), xTitle="deltaR"))
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVDDDDD"+str(ix), CAND_CHS.fromPV0, sel1cand, EqBin(100, 0., 4.), xTitle="fromPV0"))
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVEEEEE"+str(ix), CAND_CHS.fromPV0, sel, EqBin(100, 0., 4.), xTitle="fromPV0"))
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVFFFFF"+str(ix), op.deltaR(CAND_CHS.p4, tau.p4), sel2cand, EqBin(100, 0., 1.), xTitle="DeltaR"))
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVGGGGG"+str(ix), CAND_CHS.fromPV0, sel2cand, EqBin(100, 0., 4.), xTitle="fromPV0"))
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVHHHHHH"+str(ix), op.rng_min(jets, lambda jetpuppi: op.deltaR(CAND_CHS.p4, jetpuppi.p4)), sel2cand, EqBin(100, 0., 2.), xTitle="DeltaR"))
+        
+        
+        
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVMMMMM"+str(ix), tau.status, sel2cand, EqBin(16, 0., 16.), xTitle="Decay mode"))
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVNNNNN"+str(ix), op.rng_len(all_candCHS), sel2cand, EqBin(20, 0., 20.), xTitle="n elements"))
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVOOOOO"+str(ix), recojetCHS1.pt, sel2cand, EqBin(20, 0., 100.), xTitle="jet p_t"))
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVQQQQQQ"+str(ix), CAND_CHS.pt/tau.pt, sel2cand, EqBin(11, 0., 1.1), xTitle="frac p_t"))
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVRRRRRR"+str(ix), CAND_CHS.charge, sel2cand, EqBin(20, -2., 2.), xTitle="DeltaR"))
+        #plots.append(Plot.make1D(f"{sel_tag}_PROVSSSSSS"+str(ix), CAND_CHS.pdgId, sel2cand, EqBin(20, 20., 30.), xTitle="Id"))
+        
+        
+        
+        #for fpv in range(4):
+        #    print(fpv)
+        #    sel3cand = sel2cand.refine("SELECTIONPV_PFCAND"+str(fpv), cut = (CAND_CHS.fromPV0 == fpv))
+        #    plots.append(Plot.make1D(f"{sel_tag}_PROVIIIII"+str(fpv), CAND_CHS.puppiWeight, sel3cand, EqBin(40, 0., 1.1), xTitle="Puppi Weight"))
+        #    plots.append(Plot.make1D(f"{sel_tag}_PROVJJJJJ"+str(fpv), op.deltaR(CAND_CHS.p4, tau.p4), sel3cand, EqBin(10, 0., 0.4), xTitle="DeltaR"))
+        #    plots.append(Plot.make1D(f"{sel_tag}_PROVKKKKK"+str(fpv), op.deltaR(CAND_CHS.p4, recojetCHS.p4), sel3cand, EqBin(10, 0., 0.21), xTitle="DeltaR"))
+        #    plots.append(Plot.make1D(f"{sel_tag}_PROV00000"+str(fpv), op.deltaR(tau.p4, recojetCHS.p4), sel3cand, EqBin(10, 0., 1.0), xTitle="DeltaR"))
+        #    
+        #    plots.append(Plot.make1D(f"{sel_tag}_PROVLLLLL"+str(fpv), CAND_CHS.pt/recojetCHS.pt, sel3cand, EqBin(10, 0., 1.1), xTitle="frac p_t"))
+        # 
+        #    plots.append(Plot.make1D(f"{sel_tag}_PROVMMMMM_"+str(fpv), tau.status, sel3cand, EqBin(16, 0., 16.), xTitle="Decay mode"))
+        #    plots.append(Plot.make1D(f"{sel_tag}_PROVNNNNN_"+str(fpv), op.rng_len(all_candCHS), sel3cand, EqBin(20, 0., 20.), xTitle="n elements"))
+        #    plots.append(Plot.make1D(f"{sel_tag}_PROVOOOOO_"+str(fpv), recojetCHS1.pt, sel3cand, EqBin(20, 0., 100.), xTitle="jet p_t"))
+        #    plots.append(Plot.make1D(f"{sel_tag}_PROVQQQQQQ_"+str(fpv), CAND_CHS.pt/tau.pt, sel3cand, EqBin(11, 0., 1.1), xTitle="frac p_t"))
+        #    plots.append(Plot.make1D(f"{sel_tag}_PROVRRRRRR_"+str(fpv), CAND_CHS.charge, sel3cand, EqBin(20, -2., 2.), xTitle="DeltaR"))               
+        #    plots.append(Plot.make1D(f"{sel_tag}_PROVSSSSSS_"+str(fpv), CAND_CHS.pdgId, sel3cand, EqBin(20, 20., 30.), xTitle="Id"))               
+       
+        sel4cand = sel2cand.refine("SELECTIONPV_CHARGED", cut = (CAND_CHS.charge != 0.))
+        plots.append(Plot.make1D(f"{sel_tag}_PROVGGGGGP"+str(ix), CAND_CHS.fromPV0, sel4cand, EqBin(8, -0.25, 3.75), xTitle="fromPV0"))
+        plots.append(Plot.make1D(f"{sel_tag}_PROVFFFFFP"+str(ix), op.deltaR(CAND_CHS.p4, tau.p4), sel4cand, EqBin(20, 0., 0.4), xTitle="DeltaR"))
+        plots.append(Plot.make1D(f"{sel_tag}_PROVFFFFFS"+str(ix), op.deltaR(CAND_CHS.p4, recojetCHS.p4), sel4cand, EqBin(20, 0., 0.4), xTitle="DeltaR"))
+        plots.append(Plot.make1D(f"{sel_tag}_PROVQQQQQP"+str(ix), CAND_CHS.pt/recojetCHS1.pt, sel4cand, EqBin(11, 0., 1.1), xTitle="frac p_t"))
+        plots.append(Plot.make1D(f"{sel_tag}_PROVIIIIIP"+str(ix), CAND_CHS.puppiWeight, sel4cand, EqBin(40, 0., 1.1), xTitle="Puppi Weight"))
+        for fpv in range(4):
+            sel3cand = sel4cand.refine("SELECTIONPV_PFCAND_"+str(fpv), cut = (CAND_CHS.fromPV0 == fpv))
+            plots.append(Plot.make1D(f"{sel_tag}_PROVFFFFFP_"+str(fpv), op.deltaR(CAND_CHS.p4, tau.p4), sel3cand, EqBin(20, 0., 0.4), xTitle="DeltaR"))
+            plots.append(Plot.make1D(f"{sel_tag}_PROVFFFFFS_"+str(fpv), op.deltaR(CAND_CHS.p4, recojetCHS.p4), sel3cand, EqBin(20, 0., 0.4), xTitle="DeltaR"))
+            plots.append(Plot.make1D(f"{sel_tag}_PROVQQQQQP_"+str(fpv), CAND_CHS.pt/recojetCHS1.pt, sel3cand, EqBin(11, 0., 1.1), xTitle="frac p_t"))
+            plots.append(Plot.make1D(f"{sel_tag}_PROVIIIIIP_"+str(fpv), CAND_CHS.puppiWeight, sel3cand, EqBin(40, 0., 1.1), xTitle="Puppi Weight"))
+        
         
         
         
@@ -588,8 +656,28 @@ def taufromPV(taus, jets, jetsCHS, PFCand, sel, sel_tag, ntaus = 1, deltaRcut1 =
         
         
         
+def METPlots(Zboson, MET, sel, sel_tag, bPNet = True):
+    plots = []
+    ptBinning = VarBin([0.,10.,20.,25.,30.,35.,40.,45.,50.,55.,60.,65.,70.,75.,80.,85.,90.,100.])
+    
+    Q = op.sum(MET.p4, - Zboson)
+    rec_par = op.sum(op.product(Q.px(), Zboson.px()), op.product(Q.py(), Zboson.py()))/Zboson.pt()
+    rec_perp = op.sqrt(op.sum(op.pow(Q.pt(), 2)/op.pow(Zboson.pt(), 2), -op.pow(rec_par, 2)))
+    #plots.append(Plot.make1D(f"{sel_tag}_PROVDDDDD", rec_perp, sel, EqBin(100, 0., 20.), xTitle="Px"))
+    plots.append( Plot.make1D(f"{sel_tag}_rec_response", rec_par/Zboson.pt(), sel, EqBin(10, 0., 2.), xTitle="reponse"))
+    plots.append( Plot.make1D(f"{sel_tag}_rec_resolutionx", rec_par, sel, ptBinning, xTitle="Pt // x"))
+    plots.append( Plot.make1D(f"{sel_tag}_rec_resolutiony", rec_perp, sel, EqBin(10, 0., 40.), xTitle="P // y"))
+    
+    
+ 
+    return plots    
         
+                  
         
+
+
+
+
         
         
         
